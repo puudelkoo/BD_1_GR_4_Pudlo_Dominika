@@ -1,0 +1,25 @@
+Zadanie 1
+id_produktu -> nazwa_produktu, cena_produktu, VAT
+nazwa_produktu -> cena_produktu, VAT
+nazwa_produktu -> VAT
+id_klienta -> nazwa_klienta
+id_klienta, data_zamowienia -> suma_brutto, suma_netto
+id_produktu, id_klienta, data_zamowienia -> ilość, cena_produktu
+data_zamowienia -> suma_brutto, suma_netto
+suma netto, VAT -> suma_brutto
+
+Zadanie 2
+
+id_produktu, id_klienta, data_zamowienia
+
+Zadanie 3
+
+id_pomieszczenia -> numer_pomieszczenia, powierzchnia, liczba_okien, liczba_drzwi
+id_budynku -> ulica, miasto, kod_pocztowy
+id_budynku -> powierzchnia, liczba_okien, liczba_drzwi
+
+klucze kandydujące:
+
+id_pomieszczenia
+numer_pomieszczenia, id_budynku
+ulica, miasto, kod_pocztowy
