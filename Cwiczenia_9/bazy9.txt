@@ -1,0 +1,110 @@
+-- Zadanie 1
+
+EXPLAIN ANALYZE
+SELECT
+c.customerid,
+c.personid,
+c.storeid,
+c.territoryid,
+soh.salesorderid,
+soh.orderdate,
+soh.duedate,
+soh.shipdate
+FROM sales.customer c
+INNER JOIN sales.salesorderheader soh ON c.customerid = soh.customerid
+WHERE c.territoryid = 5
+
+CREATE INDEX idx_customerid2 ON sales.customer (customerid);
+CREATE INDEX idx_territoryid2 ON sales.customer (territoryid);
+CREATE INDEX idx_orderdate ON sales.salesorderheader (orderdate);
+
+EXPLAIN ANALYZE
+SELECT
+c.customerid,
+c.personid,
+c.storeid,
+c.territoryid,
+soh.salesorderid,
+soh.orderdate,
+soh.duedate,
+soh.shipdate
+FROM sales.customer c
+INNER JOIN sales.salesorderheader soh ON c.customerid = soh.customerid
+WHERE c.territoryid = 5
+
+---------------------------------------------------------------------------------------------
+
+"Hash Join  (cost=415.95..1581.22 rows=279 width=44) (actual time=3.838..14.899 rows=486 loops=1)"
+"  Hash Cond: (soh.customerid = c.customerid)"
+"  ->  Seq Scan on salesorderheader soh  (cost=0.00..1082.65 rows=31465 width=32) (actual time=0.321..8.854 rows=31465 loops=1)"
+"  ->  Hash  (cost=413.75..413.75 rows=176 width=16) (actual time=3.507..3.508 rows=176 loops=1)"
+"        Buckets: 1024  Batches: 1  Memory Usage: 16kB"
+"        ->  Seq Scan on customer c  (cost=0.00..413.75 rows=176 width=16) (actual time=0.440..3.466 rows=176 loops=1)"
+"              Filter: (territoryid = 5)"
+"              Rows Removed by Filter: 19644"
+"Planning Time: 9.508 ms"
+"Execution Time: 15.004 ms"
+
+
+"Hash Join  (cost=183.14..1348.41 rows=279 width=44) (actual time=0.127..4.270 rows=486 loops=1)"
+"  Hash Cond: (soh.customerid = c.customerid)"
+"  ->  Seq Scan on salesorderheader soh  (cost=0.00..1082.65 rows=31465 width=32) (actual time=0.007..1.461 rows=31465 loops=1)"
+"  ->  Hash  (cost=180.94..180.94 rows=176 width=16) (actual time=0.105..0.106 rows=176 loops=1)"
+"        Buckets: 1024  Batches: 1  Memory Usage: 16kB"
+"        ->  Bitmap Heap Scan on customer c  (cost=5.65..180.94 rows=176 width=16) (actual time=0.046..0.085 rows=176 loops=1)"
+"              Recheck Cond: (territoryid = 5)"
+"              Heap Blocks: exact=24"
+"              ->  Bitmap Index Scan on idx_territoryid2  (cost=0.00..5.61 rows=176 width=0) (actual time=0.038..0.038 rows=176 loops=1)"
+"                    Index Cond: (territoryid = 5)"
+"Planning Time: 15.827 ms"
+"Execution Time: 4.315 ms"
+
+RÓŻNICE:
+Plan kosztów: Pierwszy plan (415.95..1581.22) ma wyższe koszty w porównaniu do drugiego (183.14..1348.41). Oznacza to, że według szacunków optymalizatora zapytań, pierwszy plan mógłby być droższy w wykonaniu.
+
+Typ dostępu do danych: W pierwszym fragmencie mamy "Seq Scan" (Sequential Scan) dla tabeli salesorderheader i "Seq Scan" dla tabeli customer. To oznacza pełne skanowanie sekwencyjne tabel. W drugim fragmencie mamy "Seq Scan" dla salesorderheader i "Bitmap Heap Scan" dla customer, co wskazuje na używanie indeksu bitmapowego.
+
+Filtracja: W pierwszym fragmencie filtracja odbywa się po wykonaniu operacji "Seq Scan" dla tabeli customer, a w drugim fragmencie filtracja jest realizowana przy użyciu indeksu bitmapowego, co może być bardziej efektywne w przypadku dużych zbiorów danych.
+
+Czas wykonania: Drugi plan wykonuje się szybciej (4.315 ms) niż pierwszy (15.004 ms). To sugeruje, że drugi plan jest bardziej efektywny i lepiej zoptymalizowany.
+
+Podsumowując, drugi plan wykonania wydaje się być bardziej efektywny, prawdopodobnie dzięki zastosowaniu indeksu bitmapowego i bardziej optymalnej kolejności operacji
+
+
+
+--Zadanie 2
+--a) Napisz zapytanie, które wykorzystuje transakcję (zaczyna ją), a następnie aktualizuje cenę 
+-- produktu o ProductID równym 680 w tabeli Production.Product o 10% i następnie zatwierdza transakcję.
+
+BEGIN TRANSACTION; 
+
+UPDATE production.product
+SET listprice = listprice + 0.1*listprice  
+WHERE productid = 680;
+
+COMMIT TRANSACTION;
+
+--b) Napisz zapytanie, które zaczyna transakcję, usuwa produkt o ProductID równym 707
+-- z tabeli Production. Product, ale następnie wycofuje transakcję
+
+BEGIN WORK;
+
+DELETE FROM production.product
+WHERE productid = 707; 
+
+ROLLBACK; 
+
+--c) Napisz zapytanie, które zaczyna transakcję, dodaje nowy produkt do tabeli
+BEGIN WORK;
+
+INSERT INTO production.product 
+(
+  	name, productnumber, makeflag, finishedgoodsflag, color, safetystocklevel, reorderpoint, standardcost, listprice, size, sizeunitmeasurecode,
+  	weightunitmeasurecode, weight, daystomanufacture, productline, class, style, productsubcategoryid, productmodelid, sellstartdate, sellenddate,
+  	discontinueddate, rowguid, modifieddate
+)
+VALUES 
+('Produkt', 'NP001', 1, 0, 'Zielony', 12, 7, 15.00, 30.00, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, GETDATE(), NULL, NULL, NEWID(), GETDATE()
+);
+
+COMMIT;
